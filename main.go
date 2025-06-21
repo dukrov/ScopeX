@@ -1,7 +1,7 @@
 package main
 
 import (
-	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -11,23 +11,14 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 )
 
-type Config struct {
-	Token           string   `json:"token"`
-	AuthorizedUsers []int64  `json:"authorized_users"`
-}
-
-var config Config
-
 func main() {
-	// Load config
-	file, err := os.Open("config.json")
-	if err != nil {
-		log.Fatal("Error reading config:", err)
+	// Load Telegram token from env
+	token := os.Getenv("TELEGRAM_TOKEN")
+	if token == "" {
+	log.Fatal("TELEGRAM_TOKEN environment variable is not set")
 	}
-	defer file.Close()
-	json.NewDecoder(file).Decode(&config)
-
-	bot, err := tgbotapi.NewBotAPI(config.Token)
+	
+	bot, err := tgbotapi.NewBotAPI(token)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -81,8 +72,19 @@ func main() {
 }
 
 func isAuthorized(userID int) bool {
-	for _, id := range config.AuthorizedUsers {
-		if id == int64(userID) {
+	authorized := os.Getenv("AUTHORIZED_USERS")
+	if authorized == "" {
+		log.Println("AUTHORIZED_USERS not set")
+		return false
+	}
+
+	ids := strings.Split(authorized, ",")
+	for _, idStr := range ids {
+		idStr = strings.TrimSpace(idStr)
+		if idStr == "" {
+			continue
+		}
+		if idStr == fmt.Sprintf("%d", userID) {
 			return true
 		}
 	}
